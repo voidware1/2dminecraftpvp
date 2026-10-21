@@ -54,8 +54,83 @@ signInAnonymously(auth).catch(e=>{say('queueStatus','Firebase sign-in failed: '+
 async function signInReady(){try{await set(ref(db,'presence/'+uid),{name:displayName,online:true,lastSeen:serverTimestamp()});onDisconnect(ref(db,'presence/'+uid)).update({online:false,lastSeen:serverTimestamp()})}catch(e){console.warn('Presence write failed; check rules',e)}}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('queueStatus','Selected '+mode+'. Ready to join queue.')});
 document.querySelectorAll('[data-kit]').forEach(b=>b.onclick=()=>{kit=b.dataset.kit;document.querySelectorAll('[data-kit]').forEach(x=>x.classList.toggle('selected',x===b));say('kitStatus','Selected kit: '+kit)});
-async function leaveQueue(){if(!uid||!myQueue)return;try{await remove(ref(db,'queues/'+myQueue+'/'+uid));myQueue=null;say('queueStatus','You left the queue.')}catch(e){err('queueStatus',e)}}
-$('joinQueue').onclick=async()=>{if(!uid)return say('queueStatus','Connecting to Firebase…');await leaveQueue();myQueue=mode;const qref=ref(db,'queues/'+mode+'/'+uid);try{await set(qref,{uid,name:displayName,kit,joinedAt:serverTimestamp()});onDisconnect(qref).remove();say('queueStatus','Queued for '+mode+'. Waiting for another player…\\nThis starter writes queue entries; a trusted matcher is needed to create secure live matches.')}catch(e){myQueue=null;err('queueStatus',e)}};
+let queueListener=null, matchRedirecting=false, scanBusy=false;
+function stopQueueListener(){if(queueListener){queueListener();queueListener=null}}
+async function leaveQueue(){
+  if(!uid||!myQueue)return;
+  const oldMode=myQueue;
+  stopQueueListener();
+  try{
+    const qref=ref(db,'queues/'+oldMode+'/'+uid);
+    const snap=await get(qref);
+    if(snap.exists() && snap.val()?.status!=='matched') await remove(qref);
+    myQueue=null;
+    say('queueStatus','You left the '+oldMode+' queue.');
+  }catch(e){err('queueStatus',e)}
+}
+function launchMatchedMatch(entry){
+  if(matchRedirecting||!entry?.matchId)return;
+  matchRedirecting=true;
+  stopQueueListener();
+  say('queueStatus','Match found! Loading arena…');
+  const params=new URLSearchParams({mode:entry.mode||myQueue||mode,match:entry.matchId,team:entry.team||'red'});
+  setTimeout(()=>{location.href='game.html?'+params.toString()},650);
+}
+async function scanQueue(modeToScan){
+  if(!uid||myQueue!==modeToScan||scanBusy||matchRedirecting)return;
+  scanBusy=true;
+  const queueRef=ref(db,'queues/'+modeToScan);
+  const matchId='m_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+  const needed=modeToScan==='2v2'?4:2;
+  try{
+    const result=await runTransaction(queueRef, queue=>{
+      if(!queue||!queue[uid]||queue[uid].status==='matched')return;
+      const mine=queue[uid];
+      const waiting=Object.values(queue)
+        .filter(p=>p&&p.uid&&p.uid!==uid&&p.status==='waiting'&&p.mode===modeToScan)
+        .sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0));
+      const group=[mine,...waiting].slice(0,needed);
+      if(group.length<needed){
+        queue[uid]={...mine,status:'waiting',mode:modeToScan};
+        return queue;
+      }
+      const ids=group.map(p=>p.uid);
+      const teams=modeToScan==='2v2'?['red','blue','red','blue']:['red','blue'];
+      const match={matchId,mode:modeToScan,players:ids,createdAt:Date.now(),status:'ready'};
+      ids.forEach((id,i)=>{
+        queue[id]={...queue[id],status:'matched',mode:modeToScan,matchId,team:teams[i],match};
+      });
+      return queue;
+    },{applyLocally:false});
+    const mine=result.snapshot.child(uid).val();
+    if(mine?.status==='matched')launchMatchedMatch(mine);
+    else if(mine?.status==='waiting')say('queueStatus','Searching for '+modeToScan+' opponents…\\nYour queue is active. This page will keep scanning automatically.');
+  }catch(e){err('queueStatus',e)}
+  finally{scanBusy=false}
+}
+function startQueueScanner(modeToScan){
+  stopQueueListener();
+  queueListener=onValue(ref(db,'queues/'+modeToScan),snap=>{
+    const queue=snap.val()||{};
+    const mine=queue[uid];
+    if(mine?.status==='matched'){launchMatchedMatch(mine);return}
+    if(myQueue===modeToScan&&!matchRedirecting)scanQueue(modeToScan);
+  },e=>err('queueStatus',e));
+}
+$('joinQueue').onclick=async()=>{
+  if(!uid)return say('queueStatus','Connecting to Firebase…');
+  if(myQueue)await leaveQueue();
+  matchRedirecting=false;
+  myQueue=mode;
+  const qref=ref(db,'queues/'+mode+'/'+uid);
+  try{
+    await set(qref,{uid,name:displayName,kit,mode,status:'waiting',joinedAt:Date.now()});
+    await onDisconnect(qref).remove();
+    say('queueStatus','Entered '+mode+' queue. Scanning for players…');
+    startQueueScanner(mode);
+    await scanQueue(mode);
+  }catch(e){myQueue=null;err('queueStatus',e)}
+};
 $('leaveQueue').onclick=leaveQueue;
 async function detachRoom(){if(roomListener){roomListener();roomListener=null}activeRoom=null;currentRoomData=null;$('lobby').classList.add('hidden')}
 function watchRoom(roomId){if(roomListener)roomListener();activeRoom=roomId;$('lobby').classList.remove('hidden');roomListener=onValue(ref(db,'privateRooms/'+roomId),snap=>{if(!snap.exists()){say('lobbyStatus','This room was closed or no longer exists.');$('lobby').classList.add('hidden');activeRoom=null;return}currentRoomData=snap.val();renderRoom() },e=>err('lobbyStatus',e))}
@@ -66,5 +141,5 @@ async function assignTeam(playerId,team){if(!activeRoom||!currentRoomData||curre
 $('copyCode').onclick=async()=>{try{await navigator.clipboard.writeText($('lobbyCode').textContent);say('lobbyStatus','Invite code copied. Share the code with friends.')}catch{say('lobbyStatus','Room code: '+$('lobbyCode').textContent+' (copy it manually)')}};
 $('closeRoom').onclick=async()=>{if(!activeRoom||currentRoomData?.host!==uid)return;try{await remove(ref(db,'privateRooms/'+activeRoom));$('lobby').classList.add('hidden');say('roomStatus','Room closed.');activeRoom=null;if(roomListener){roomListener();roomListener=null}}catch(e){err('lobbyStatus',e)}};
 $('startMatch').onclick=async()=>{if(!activeRoom||currentRoomData?.host!==uid)return;const players=currentRoomData.players||{};if(Object.keys(players).length<2)return say('lobbyStatus','Invite at least one other player before starting.');try{await update(ref(db,'privateRooms/'+activeRoom),{status:'starting',startedAt:serverTimestamp()});say('lobbyStatus','Host started the room. Arena launch and authoritative match synchronization are the next game-engine step.')}catch(e){err('lobbyStatus',e)}};
-window.addEventListener('beforeunload',()=>{if(myQueue&&uid)remove(ref(db,'queues/'+myQueue+'/'+uid))});
+window.addEventListener('beforeunload',()=>{stopQueueListener();if(myQueue&&uid)remove(ref(db,'queues/'+myQueue+'/'+uid))});
 </script></body></html>
