@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Voidware KitPvP</title>
+<style>
+:root{color-scheme:dark;--bg:#080610;--panel:#130d20;--purple:#a66bff;--line:#59318a;--muted:#b9a9ce}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -10%,#42206d 0,transparent 48%),#080610;color:#f6f0ff;font:16px system-ui,Arial,sans-serif;display:grid;place-items:center;padding:22px}
+main{width:min(920px,100%)}.brand{text-align:center;margin-bottom:26px}.logo{width:76px;height:76px;border:2px solid #a66bff;border-radius:24px;display:grid;place-items:center;font-size:38px;margin:0 auto 12px;background:#1b102b;box-shadow:0 0 38px #7a36d966}.eyebrow{text-transform:uppercase;letter-spacing:4px;color:#c6a4ff;font-size:12px}.brand h1{font-size:clamp(34px,7vw,58px);margin:8px 0;font-weight:900;letter-spacing:-2px}.brand h1 span{color:var(--purple)}.brand p{color:var(--muted);margin:0}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:#130d20dd;border:1px solid var(--line);border-radius:18px;padding:22px;min-height:190px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}.icon{font-size:30px}.card h2{margin:0;font-size:21px}.card p{margin:0;color:var(--muted);line-height:1.5;font-size:14px;flex:1}a,button{font:inherit;text-decoration:none;color:#fff;border:1px solid #8651c9;background:#26153b;border-radius:10px;padding:11px 15px;cursor:pointer}.primary{background:linear-gradient(110deg,#7130df,#a347ff);border:0;font-weight:800}.kits{margin-top:16px;border:1px solid #38234f;border-radius:15px;padding:18px;background:#0d0915}.kits h3{margin:0 0 12px;color:#d5baff}.kitgrid{display:flex;flex-wrap:wrap;gap:8px}.pill{border:1px solid #50336d;border-radius:30px;padding:7px 11px;font-size:13px;color:#e1d4f2;background:#171021}footer{text-align:center;color:#80728f;font-size:12px;margin-top:20px}@media(max-width:600px){.cards{grid-template-columns:1fr}.card{min-height:160px}.brand h1{letter-spacing:-1px}}
+</style></head>
+<body><main>
+<header class="brand"><div class="logo">⚔</div><div class="eyebrow">VOIDWARE PRESENTS</div><h1>Kit<span>PvP</span></h1><p>Pick your kit. Find your fight. Make your name.</p></header>
+<section class="cards">
+<article class="card"><div class="icon">🌐</div><h2>Play Online</h2><p>Queue for 1v1 or 2v2 matches, or create a private room for up to 16 players across four teams.</p><a class="primary" href="play.html">Open matchmaking →</a></article>
+<article class="card"><div class="icon">🤖</div><h2>Play Offline</h2><p>Practice movement and combat against bots without joining an online match.</p><a href="game.html?mode=offline">Play offline →</a></article>
+</section>
+<section class="kits"><h3>Choose your combat style</h3><div class="kitgrid"><span class="pill">🔨 Mace PvP</span><span class="pill">🪽 Elytra Mace</span><span class="pill">💣 TNT Cart</span><span class="pill">💎 Crystal PvP</span><span class="pill">⚔ Sword PvP</span></div></section>
+<footer>Prototype · Online matches require Firebase Authentication and secure Realtime Database rules.</footer>
+</main></body></html>

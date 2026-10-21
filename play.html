@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Matchmaking — Voidware KitPvP</title>
+<style>
+:root{color-scheme:dark;--purple:#a66bff;--line:#59318a;--muted:#b9a9ce}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -10%,#321750 0,transparent 45%),#080610;color:#f6f0ff;font:15px system-ui,Arial,sans-serif}header{padding:16px max(18px,calc((100% - 1050px)/2));border-bottom:1px solid #352044;display:flex;align-items:center;justify-content:space-between;gap:12px}header a{color:#d8c0ff;text-decoration:none}main{max-width:1050px;margin:auto;padding:22px 16px 50px}h1{font-size:clamp(28px,5vw,42px);margin:12px 0 4px}h2{font-size:18px;margin:0 0 14px}.muted{color:var(--muted);line-height:1.5}.layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:#130d20eF;border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mode{padding:15px;text-align:left;min-height:100px;background:#1a1028;border:1px solid #4e326b;border-radius:12px;color:#fff;cursor:pointer}.mode strong{display:block;font-size:17px;margin-bottom:5px}.mode small{color:var(--muted)}.mode.selected{border-color:#c49aff;box-shadow:0 0 0 1px #a66bff inset;background:#2c1745}button,input,select{font:inherit}button{background:#28173c;color:#fff;border:1px solid #7245a7;border-radius:9px;padding:10px 13px;cursor:pointer}button.primary{background:linear-gradient(110deg,#7130df,#a347ff);border:0;font-weight:750}button:disabled{opacity:.45;cursor:not-allowed}input,select{width:100%;background:#090711;color:#fff;border:1px solid #51356c;border-radius:9px;padding:11px;margin:6px 0 12px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.status{border-radius:9px;background:#0b0811;padding:10px;color:#d4c4e6;margin-top:10px;white-space:pre-wrap}.players{display:grid;gap:8px}.player{display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center;background:#0d0915;border:1px solid #30203e;border-radius:9px;padding:9px}.player small{display:block;color:var(--muted)}.teamtag{font-size:11px;color:#d9baff}.danger{border-color:#a94b6d}.hidden{display:none!important}.rules{font-size:12px;color:#a99ab9;margin-top:12px}@media(max-width:700px){.layout{grid-template-columns:1fr}.modes{grid-template-columns:1fr 1fr}.player{grid-template-columns:1fr 120px}}@media(max-width:420px){.modes{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><a href="index.html">← Voidware KitPvP</a><span id="identity">Connecting…</span></header>
+<main><div class="muted">MATCHMAKING / PRIVATE LOBBIES</div><h1>Find your fight.</h1><p class="muted">Queue for quick matches or make a private room with up to 16 players split across four teams.</p>
+<div class="layout">
+<section class="panel"><h2>Quick match</h2><div class="modes">
+<button class="mode selected" data-mode="1v1"><strong>⚔ 1v1</strong><small>One player vs one player</small></button>
+<button class="mode" data-mode="2v2"><strong>🛡 2v2</strong><small>Two-player teams</small></button>
+</div><p class="muted">Choose a mode, then join its queue. Queue matching is a prototype and requires secure database rules before public use.</p><div class="row"><button class="primary" id="joinQueue">Join queue</button><button id="leaveQueue">Leave queue</button></div><div class="status" id="queueStatus">Choose a mode to begin.</div></section>
+<section class="panel"><h2>Private room</h2><p class="muted">Create a room and invite friends with its code, or join a room someone shared with you.</p><button class="primary" id="createRoom">Create private room</button><label for="roomCode">Room code</label><input id="roomCode" placeholder="Enter code (e.g. A4K9QX)" maxlength="8" autocomplete="off"><button id="joinRoom">Join room</button><div class="status" id="roomStatus">No private room selected.</div></section>
+</div>
+<section id="lobby" class="panel hidden"><div class="row"><div><h2 style="margin-bottom:4px">Private lobby <span id="lobbyCode"></span></h2><div class="muted" id="lobbyMeta">0 / 16 players</div></div><button id="copyCode">Copy invite code</button></div><p class="muted">The host can assign players to any of the four teams. The room holds a maximum of 16 players.</p><div id="hostTools" class="row hidden"><button class="primary" id="startMatch">Start match</button><button class="danger" id="closeRoom">Close room</button></div><div id="playerList" class="players"></div><div id="lobbyStatus" class="status">Waiting for players…</div></section>
+<section class="panel"><h2>Choose your kit</h2><div class="modes" id="kitChoices">
+<button class="mode selected" data-kit="Mace"><strong>🔨 Mace PvP</strong><small>Smash and wind charges</small></button>
+<button class="mode" data-kit="Elytra Mace"><strong>🪽 Elytra Mace</strong><small>Flight and aerial smashes</small></button>
+<button class="mode" data-kit="TNT Cart"><strong>💣 TNT Cart</strong><small>Minecart explosives</small></button>
+<button class="mode" data-kit="Crystal PvP"><strong>💎 Crystal PvP</strong><small>Obsidian and crystals</small></button>
+<button class="mode" data-kit="Sword PvP"><strong>⚔ Sword PvP</strong><small>Combos and knockback</small></button>
+</div><p class="muted" id="kitStatus">Selected kit: Mace</p></section>
+<p class="rules">Security note: Firebase web configuration is not a secret. Protect player data with Authentication and Realtime Database Security Rules. This client-side lobby is a prototype; production matchmaking and match results should be validated by trusted server logic.</p>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+import { getDatabase, ref, set, get, update, remove, push, onValue, runTransaction, serverTimestamp, onDisconnect } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC3Gc_DfcZDCBLxKoDgdlruBPdPNLBOVAo",
+  authDomain: "bedwars-2f641.firebaseapp.com",
+  databaseURL: "https://bedwars-2f641-default-rtdb.firebaseio.com",
+  projectId: "bedwars-2f641",
+  storageBucket: "bedwars-2f641.firebasestorage.app",
+  messagingSenderId: "158660772996",
+  appId: "1:158660772996:web:63908ad87c40bd8415aed1",
+  measurementId: "G-7XH04KT75J"
+};
+const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
+const $=id=>document.getElementById(id);
+let uid=null, displayName='Player', mode='1v1', kit='Mace', activeRoom=null, roomListener=null, myQueue=null, currentRoomData=null;
+const teamNames={red:'Red Team',blue:'Blue Team',green:'Green Team',yellow:'Yellow Team'};
+function code(){return Math.random().toString(36).slice(2,8).toUpperCase()}
+function safeName(s){return String(s||'Player').replace(/[.#$\[\]\/]/g,'').slice(0,20)||'Player'}
+function say(id,msg){$(id).textContent=msg}
+function err(id,e){console.error(e);say(id,(e?.code?e.code+': ':'')+(e?.message||String(e))+' — Check Firebase Authentication and Realtime Database rules.')}
+onAuthStateChanged(auth, user=>{if(user){uid=user.uid;displayName='Player-'+uid.slice(0,5);$('identity').textContent=displayName;signInReady()}});
+signInAnonymously(auth).catch(e=>{say('queueStatus','Firebase sign-in failed: '+e.message);say('roomStatus','Enable Anonymous sign-in in Firebase Authentication.')});
+async function signInReady(){try{await set(ref(db,'presence/'+uid),{name:displayName,online:true,lastSeen:serverTimestamp()});onDisconnect(ref(db,'presence/'+uid)).update({online:false,lastSeen:serverTimestamp()})}catch(e){console.warn('Presence write failed; check rules',e)}}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('selected',x===b));say('queueStatus','Selected '+mode+'. Ready to join queue.')});
+document.querySelectorAll('[data-kit]').forEach(b=>b.onclick=()=>{kit=b.dataset.kit;document.querySelectorAll('[data-kit]').forEach(x=>x.classList.toggle('selected',x===b));say('kitStatus','Selected kit: '+kit)});
+async function leaveQueue(){if(!uid||!myQueue)return;try{await remove(ref(db,'queues/'+myQueue+'/'+uid));myQueue=null;say('queueStatus','You left the queue.')}catch(e){err('queueStatus',e)}}
+$('joinQueue').onclick=async()=>{if(!uid)return say('queueStatus','Connecting to Firebase…');await leaveQueue();myQueue=mode;const qref=ref(db,'queues/'+mode+'/'+uid);try{await set(qref,{uid,name:displayName,kit,joinedAt:serverTimestamp()});onDisconnect(qref).remove();say('queueStatus','Queued for '+mode+'. Waiting for another player…\\nThis starter writes queue entries; a trusted matcher is needed to create secure live matches.')}catch(e){myQueue=null;err('queueStatus',e)}};
+$('leaveQueue').onclick=leaveQueue;
+async function detachRoom(){if(roomListener){roomListener();roomListener=null}activeRoom=null;currentRoomData=null;$('lobby').classList.add('hidden')}
+function watchRoom(roomId){if(roomListener)roomListener();activeRoom=roomId;$('lobby').classList.remove('hidden');roomListener=onValue(ref(db,'privateRooms/'+roomId),snap=>{if(!snap.exists()){say('lobbyStatus','This room was closed or no longer exists.');$('lobby').classList.add('hidden');activeRoom=null;return}currentRoomData=snap.val();renderRoom() },e=>err('lobbyStatus',e))}
+$('createRoom').onclick=async()=>{if(!uid)return say('roomStatus','Connecting to Firebase…');try{let roomId,existing;for(let i=0;i<5;i++){roomId=code();existing=await get(ref(db,'privateRooms/'+roomId));if(!existing.exists())break}const room={code:roomId,host:uid,createdAt:serverTimestamp(),status:'lobby',maxPlayers:16,players:{[uid]:{uid,name:displayName,kit,team:'red',joinedAt:Date.now()}}};await set(ref(db,'privateRooms/'+roomId),room);await onDisconnect(ref(db,'privateRooms/'+roomId+'/players/'+uid)).remove();$('roomCode').value=roomId;say('roomStatus','Room created! Share code '+roomId+'.');watchRoom(roomId)}catch(e){err('roomStatus',e)}};
+$('joinRoom').onclick=async()=>{if(!uid)return say('roomStatus','Connecting to Firebase…');const roomId=$('roomCode').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(roomId))return say('roomStatus','Enter a valid 6-character room code.');try{const rref=ref(db,'privateRooms/'+roomId);const result=await runTransaction(rref,room=>{if(!room||room.status!=='lobby')return;room.players=room.players||{};if(!room.players[uid]&&Object.keys(room.players).length>=16)return;room.players[uid]={uid,name:displayName,kit,team:'red',joinedAt:Date.now()};return room});if(!result.committed)return say('roomStatus','Room not found, already started, or full (16 players maximum).');await onDisconnect(ref(db,'privateRooms/'+roomId+'/players/'+uid)).remove();say('roomStatus','Joined room '+roomId+'.');watchRoom(roomId)}catch(e){err('roomStatus',e)}};
+function renderRoom(){const room=currentRoomData,players=room.players||{},ids=Object.keys(players),host=room.host===uid;$('lobbyCode').textContent=room.code;$('lobbyMeta').textContent=ids.length+' / 16 players · '+(host?'You are host':'Host: '+(players[room.host]?.name||'Player'));$('hostTools').classList.toggle('hidden',!host);$('playerList').innerHTML='';for(const id of ids){const p=players[id]||{};const row=document.createElement('div');row.className='player';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=(p.name||'Player')+(id===room.host?' 👑':'')+(id===uid?' (you)':'');const meta=document.createElement('small');meta.textContent='Kit: '+(p.kit||'Mace')+' · '+(teamNames[p.team]||'Red Team');info.append(name,meta);row.append(info);if(host){const sel=document.createElement('select');sel.setAttribute('aria-label','Assign '+(p.name||'player')+' to team');for(const [key,label] of Object.entries(teamNames)){const op=document.createElement('option');op.value=key;op.textContent=label;op.selected=(p.team||'red')===key;sel.append(op)}sel.onchange=()=>assignTeam(id,sel.value);row.append(sel)}else{const tag=document.createElement('span');tag.className='teamtag';tag.textContent=teamNames[p.team]||'Red Team';row.append(tag)}$('playerList').append(row)}say('lobbyStatus',room.status==='lobby'?'Waiting for host to start the match.':'Match status: '+room.status)}
+async function assignTeam(playerId,team){if(!activeRoom||!currentRoomData||currentRoomData.host!==uid)return;try{await update(ref(db,'privateRooms/'+activeRoom+'/players/'+playerId),{team})}catch(e){err('lobbyStatus',e)}}
+$('copyCode').onclick=async()=>{try{await navigator.clipboard.writeText($('lobbyCode').textContent);say('lobbyStatus','Invite code copied. Share the code with friends.')}catch{say('lobbyStatus','Room code: '+$('lobbyCode').textContent+' (copy it manually)')}};
+$('closeRoom').onclick=async()=>{if(!activeRoom||currentRoomData?.host!==uid)return;try{await remove(ref(db,'privateRooms/'+activeRoom));$('lobby').classList.add('hidden');say('roomStatus','Room closed.');activeRoom=null;if(roomListener){roomListener();roomListener=null}}catch(e){err('lobbyStatus',e)}};
+$('startMatch').onclick=async()=>{if(!activeRoom||currentRoomData?.host!==uid)return;const players=currentRoomData.players||{};if(Object.keys(players).length<2)return say('lobbyStatus','Invite at least one other player before starting.');try{await update(ref(db,'privateRooms/'+activeRoom),{status:'starting',startedAt:serverTimestamp()});say('lobbyStatus','Host started the room. Arena launch and authoritative match synchronization are the next game-engine step.')}catch(e){err('lobbyStatus',e)}};
+window.addEventListener('beforeunload',()=>{if(myQueue&&uid)remove(ref(db,'queues/'+myQueue+'/'+uid))});
+</script></body></html>
